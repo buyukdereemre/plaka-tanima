@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Plaka Tanıma Sistemi</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background: #121212;
+            color: #e0e0e0;
+        }
+        h1 {
+            text-align: center;
+            color: #1DB954;
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+        #video-container, #upload-container, #add-plate-container {
+            background: #1f1f1f;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(29, 185, 84, 0.5);
+            margin: 20px auto;
+            padding: 25px;
+            max-width: 400px;
+        }
+        video {
+            display: block;
+            margin: 0 auto 15px auto;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            background: #000;
+            box-shadow: 0 0 10px #1DB954;
+        }
+        button, input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #2c2c2c;
+            color: #e0e0e0;
+            box-sizing: border-box;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        button {
+            background-color: #1DB954;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 3px 12px rgba(29, 185, 84, 0.7);
+        }
+        button:hover {
+            background-color: #17a44d;
+        }
+        input[type="text"]:focus, input[type="file"]:focus {
+            outline: none;
+            border-color: #1DB954;
+            background: #272727;
+        }
+        #result, #upload-result, #add-result {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            text-align: center;
+            user-select: none;
+        }
+        #result.success, #upload-result.success, #add-result.success {
+            background-color: #234d20;
+            color: #a6d785;
+            box-shadow: 0 0 8px #a6d785;
+        }
+        #result.error, #upload-result.error, #add-result.error {
+            background-color: #5a1a1a;
+            color: #f26b6b;
+            box-shadow: 0 0 8px #f26b6b;
+        }
+        #result.denied, #upload-result.denied, #add-result.denied {
+            background-color: #665c1a;
+            color: #d1c86b;
+            box-shadow: 0 0 8px #d1c86b;
+        }
+        label {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 8px;
+            color: #a6d785;
+        }
+    </style>
+</head>
+<body>
+    <h1>Plaka Tanıma Sistemi</h1>
+
+    <div id="video-container">
+        <video id="video" autoplay playsinline></video>
+        <button id="start-camera">Kamerayı Başlat</button>
+        <div id="result"></div>
+    </div>
+
+    <div id="upload-container">
+        <label for="upload-image">Resim Yükle (jpg, png):</label>
+        <input type="file" id="upload-image" accept="image/*" />
+        <button id="upload-btn">Plaka Tespit Et</button>
+        <div id="upload-result"></div>
+    </div>
+
+    <div id="add-plate-container">
+        <label for="plate-input">Plaka Ekle:</label>
+        <input type="text" id="plate-input" placeholder="Plakayı girin (örn: 34ABC123)" />
+        <button id="add-plate-btn">Plakayı Ekle</button>
+        <div id="add-result"></div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const startCameraBtn = document.getElementById('start-camera');
+        const resultDiv = document.getElementById('result');
+        const uploadImageInput = document.getElementById('upload-image');
+        const uploadBtn = document.getElementById('upload-btn');
+        const uploadResultDiv = document.getElementById('upload-result');
+        const plateInput = document.getElementById('plate-input');
+        const addPlateBtn = document.getElementById('add-plate-btn');
+        const addResultDiv = document.getElementById('add-result');
+
+        let stream;
+
+        startCameraBtn.onclick = async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                video.srcObject = stream;
+                resultDiv.textContent = "Kamera aktif, plaka taraması başladı...";
+                resultDiv.className = "";
+                startProcessingFrames();
+            } catch (err) {
+                alert("Kamera açılamadı: " + err.message);
+            }
+        };
+
+        function startProcessingFrames() {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+
+            const processFrame = () => {
+                if (!stream) return;
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                canvas.toBlob(async (blob) => {
+                    if (!blob) return;
+
+                    const formData = new FormData();
+                    formData.append('image', blob, 'frame.jpg');
+
+                    try {
+                        const response = await fetch('/upload', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const data = await response.json();
+
+                        if (data.status === 'success') {
+                            resultDiv.textContent = data.message;
+                            resultDiv.className = 'success';
+                        } else if (data.status === 'denied') {
+                            resultDiv.textContent = data.message;
+                            resultDiv.className = 'denied';
+                        } else {
+                            resultDiv.textContent = data.message || "Plaka tespit edilemedi.";
+                            resultDiv.className = 'error';
+                        }
+                    } catch (error) {
+                        resultDiv.textContent = "Sunucu ile iletişim hatası.";
+                        resultDiv.className = 'error';
+                    }
+                }, 'image/jpeg');
+
+                setTimeout(processFrame, 5000);
+            };
+
+            processFrame();
+        }
+
+        uploadBtn.onclick = async () => {
+            if (uploadImageInput.files.length === 0) {
+                alert("Lütfen bir resim seçin.");
+                return;
+            }
+
+            const file = uploadImageInput.files[0];
+            const formData = new FormData();
+            formData.append('image', file);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    uploadResultDiv.textContent = data.message;
+                    uploadResultDiv.className = 'success';
+                } else if (data.status === 'denied') {
+                    uploadResultDiv.textContent = data.message;
+                    uploadResultDiv.className = 'denied';
+                } else {
+                    uploadResultDiv.textContent = data.message || "Plaka tespit edilemedi";
+                    uploadResultDiv.className = 'success';
+                }
+            } catch (error) {
+                uploadResultDiv.textContent = "Sunucu hatası";
+                uploadResultDiv.className = 'denied';
+            }
+        };
+
+        addPlateBtn.onclick = async () => {
+            const plate = plateInput.value.trim();
+            if (!plate) {
+                alert("Lütfen geçerli bir plaka girin.");
+                return;
+            }
+
+            const formData = new URLSearchParams();
+            formData.append('plate', plate);
+
+            try {
+                const response = await fetch('/add_plate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: formData.toString()
+                });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    addResultDiv.textContent = data.message;
+                    addResultDiv.className = 'success';
+                    plateInput.value = '';
+                } else {
+                    addResultDiv.textContent = data.message || "Plaka eklenemedi.";
+                    addResultDiv.className = 'error';
+                }
+            } catch (error) {
+                addResultDiv.textContent = "Sunucu ile iletişim hatası.";
+                addResultDiv.className = 'error';
+            }
+        };
+    </script>
+</body>
+</html>
