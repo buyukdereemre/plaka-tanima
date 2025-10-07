@@ -1,10 +1,10 @@
-# 🚗 License Plate Recognition & Truck Gate Access System
+ License Plate Recognition & Truck Gate Access System
 
 Bu proje, **YOLOv5** kullanılarak eğitilmiş iki farklı nesne tespiti modeliyle **araçlardan yalnızca kamyonları** tanıyıp plakasını okuyan ve veritabanında kayıtlıysa geçiş izni veren bir güvenlik sistemidir. Proje, Python ile yazılmıştır ve **Flask** kullanılarak web arayüzü sunulmaktadır. 
 
 Mobil cihazlar üzerinden kullanılabilir ve **ngrok** ile dış ağlardan erişim sağlanabilir.
 
-## 📌 Proje Özeti
+📌 Proje Özeti
 
 - **YOLOv5 ile nesne tespiti**: Sadece kamyonları tanımak için özel olarak eğitilmiş bir model (`truck.pt`) kullanılır.
 - **Plaka tanıma**: Tespit edilen kamyonun plakası kesilir ve OCR (optical character recognition) ile okunur.
@@ -12,7 +12,7 @@ Mobil cihazlar üzerinden kullanılabilir ve **ngrok** ile dış ağlardan eriş
 - **Gerçek zamanlı video akışı**: Web kamerası ile canlı görüntü alınır, model sürekli olarak analiz yapar.
 - **Kullanıcı arayüzü**: Web arayüzü üzerinden plaka ekleme ve canlı video izleme mümkündür.
 
-## 🛠️ Kullanılan Teknolojiler
+ Kullanılan Teknolojiler
 
 - Python
 - Flask
